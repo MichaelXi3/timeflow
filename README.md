@@ -1,10 +1,14 @@
 # TimeFlow — Calm Time Journaling
 
-Track time, not tasks. Reduce anxiety, enter flow.
-
 TimeFlow is a personal productivity app that helps you understand where your time goes without the stress of to-do lists and overdue tasks. Instead of planning what you'll do, you record what you *actually* do—in time blocks—and reflect on patterns.
 
-<img src="public/logo_bar.png" alt="TimeFlow" width="400" />
+<p align="center">
+  <img src="public/logo_bar.png" alt="TimeFlow" width="120" />
+</p>
+
+<p align="center">
+  <i>"Track time, not tasks. Reduce anxiety, enter flow."</i>
+</p>
 
 ---
 
