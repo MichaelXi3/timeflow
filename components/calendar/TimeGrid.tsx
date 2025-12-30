@@ -463,7 +463,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({ date, slots, tags, onSlotSel
                 className="absolute left-0 right-0 pointer-events-none"
                 style={{
                   top: `${currentTimeTop}px`,
-                  zIndex: 50,
+                  zIndex: 5,
                 }}
               >
                 <div className="relative flex items-center">

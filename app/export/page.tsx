@@ -196,13 +196,6 @@ export default function ExportPage() {
           </div>
         </div>
 
-        {/* Backup reminder */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>💾 Regular Backups:</strong> Export your data regularly to avoid data loss. All
-            data is stored locally in your browser. Clearing browser data will delete everything.
-          </p>
-        </div>
       </div>
 
       {/* Import Success Dialog */}

@@ -35,6 +35,8 @@ export default function DayPage() {
     setStartFlowOpen,
     isRightSidebarCollapsed,
     setRightSidebarCollapsed,
+    isLeftSidebarOpen,
+    setLeftSidebarOpen,
   } = useAppStore();
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -174,17 +176,56 @@ export default function DayPage() {
 
   return (
     <div className="h-screen flex bg-gray-50">
-      {/* Left Sidebar */}
-      <Sidebar />
+      {/* Left Sidebar - hidden on small screens, visible on lg+ */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Left Sidebar Overlay */}
+      <AnimatePresence>
+        {isLeftSidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+              onClick={() => setLeftSidebarOpen(false)}
+            />
+            {/* Sidebar */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              className="fixed left-0 top-0 h-full z-50 lg:hidden"
+            >
+              <Sidebar onClose={() => setLeftSidebarOpen(false)} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
         {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="bg-white border-b border-gray-100 px-4 lg:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Mobile hamburger menu */}
+            <button
+              className="lg:hidden p-2 -ml-2 rounded-lg transition-colors hover:bg-gray-100"
+              onClick={() => setLeftSidebarOpen(true)}
+              title="Open menu"
+            >
+              <svg className="w-5 h-5" style={{ color: 'var(--foreground)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <button
               onClick={() => safeNavigate('/')}
-              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors hidden sm:block"
             >
               ← Back to Week
             </button>
@@ -194,12 +235,11 @@ export default function DayPage() {
             >
               ← Prev
             </button>
-            <h2 className="text-sm font-medium text-gray-900">
+            <h2 className="text-xs lg:text-sm font-medium text-gray-900">
               {currentDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
+                weekday: 'short',
+                month: 'short',
                 day: 'numeric',
-                year: 'numeric',
               })}
             </h2>
             <button
@@ -210,12 +250,24 @@ export default function DayPage() {
             </button>
           </div>
 
-          <button
-            onClick={() => safeNavigate(`/day/${toYYYYMMDD(new Date())}`)}
-            className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            Today
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => safeNavigate(`/day/${toYYYYMMDD(new Date())}`)}
+              className="px-2 lg:px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              Today
+            </button>
+            {/* Mobile right sidebar toggle */}
+            <button
+              className="md:hidden p-2 -mr-2 rounded-lg transition-colors hover:bg-gray-100"
+              onClick={() => setRightSidebarCollapsed(!isRightSidebarCollapsed)}
+              title={isRightSidebarCollapsed ? 'Show log' : 'Hide log'}
+            >
+              <svg className="w-5 h-5" style={{ color: 'var(--primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Content: Time grid + Log editor */}
@@ -233,7 +285,7 @@ export default function DayPage() {
             />
           </div>
 
-          {/* Log Editor - foldable and responsive with animation */}
+          {/* Log Editor - desktop version, foldable and responsive with animation */}
           <motion.div
             animate={{
               width: isRightSidebarCollapsed ? 48 : 420,
@@ -244,7 +296,7 @@ export default function DayPage() {
               damping: 35,
               mass: 0.6,
             }}
-            className="border-l border-gray-100 bg-white overflow-hidden relative flex flex-col"
+            className="hidden md:flex border-l border-gray-100 bg-white overflow-hidden relative flex-col"
           >
             <AnimatePresence mode="wait">
               {!isRightSidebarCollapsed ? (
@@ -369,6 +421,107 @@ export default function DayPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Mobile Right Sidebar (Daily Log) Overlay */}
+      <AnimatePresence>
+        {!isRightSidebarCollapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 z-40"
+          >
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setRightSidebarCollapsed(true)}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col"
+            >
+              {/* Mobile Log header */}
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Daily Log</h3>
+                    <div className="flex bg-gray-50 p-0.5 rounded-lg border border-gray-100">
+                      <button
+                        onClick={() => setIsPreview(false)}
+                        className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
+                          !isPreview ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setIsPreview(true)}
+                        className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
+                          isPreview ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'
+                        }`}
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleInsertTemplate}
+                      className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      Template
+                    </button>
+                    <button
+                      onClick={handleSaveLog}
+                      className={`text-xs font-medium transition-colors ${
+                        hasUnsavedChanges
+                          ? 'text-blue-600 hover:text-blue-700'
+                          : 'text-gray-300'
+                      }`}
+                      disabled={!hasUnsavedChanges}
+                    >
+                      Save
+                    </button>
+                    {/* Close button */}
+                    <button
+                      onClick={() => setRightSidebarCollapsed(true)}
+                      className="p-2 -mr-2 rounded-lg transition-all hover:bg-gray-100"
+                      style={{ color: 'var(--muted-foreground)' }}
+                      title="Close"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Editor or Preview */}
+              <div className="flex-1 overflow-y-auto">
+                {!isPreview ? (
+                  <textarea
+                    className="w-full h-full px-6 py-4 text-sm text-gray-700 leading-relaxed resize-none focus:outline-none font-mono"
+                    value={markdown}
+                    onChange={(e) => setMarkdown(e.target.value)}
+                    placeholder="Write your thoughts here...&#10;&#10;Click 'Template' to auto-generate daily summary from your time blocks."
+                  />
+                ) : (
+                  <div
+                    className="prose prose-sm max-w-none px-6 py-4 overflow-y-auto markdown-preview"
+                    dangerouslySetInnerHTML={{ __html: md.render(markdown || '_No content to preview_') }}
+                  />
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Quick edit panel */}
       {selectedSlot && (

@@ -700,7 +700,7 @@ export const WeekGrid: React.FC<WeekGridProps> = ({
                       className="absolute left-0 right-0 pointer-events-none"
                       style={{
                         top: `${currentTimeTop}px`,
-                        zIndex: 50,
+                        zIndex: 5,
                       }}
                     >
                       <div className="relative flex items-center">

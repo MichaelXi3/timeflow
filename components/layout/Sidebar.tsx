@@ -83,7 +83,11 @@ const StopIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const router = useRouter();
   const { activeFlow, setActiveFlow, setStartFlowOpen, userId, setUserId } = useAppStore();
 
@@ -97,6 +101,8 @@ export const Sidebar: React.FC = () => {
     }
     // Proceed with navigation
     router.push(path);
+    // Close mobile sidebar after navigation
+    onClose?.();
   };
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -463,21 +469,42 @@ export const Sidebar: React.FC = () => {
     >
       {/* App logo */}
       <div className="p-6" style={{ borderBottom: '1px solid rgba(184, 203, 224, 0.3)' }}>
-        <div
-          className="flex items-center gap-3 cursor-pointer transition-opacity hover:opacity-80"
-          onClick={() => safeNavigate('/')}
-        >
-          <div className="relative w-12 h-12 flex-shrink-0">
-            <Image src="/logo.png" alt="TimeFlow Logo" fill className="object-contain" priority />
+        <div className="flex items-center justify-between">
+          <div
+            className="flex items-center gap-3 cursor-pointer transition-opacity hover:opacity-80"
+            onClick={() => safeNavigate('/')}
+          >
+            <div className="relative w-12 h-12 flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="TimeFlow Logo"
+                fill
+                sizes="48px"
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                TimeFlow
+              </h1>
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                Track time, not tasks
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-              TimeFlow
-            </h1>
-            <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-              Track time, not tasks
-            </p>
-          </div>
+          {/* Mobile close button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 -mr-2 rounded-lg transition-colors hover:bg-gray-100"
+              title="Close menu"
+            >
+              <svg className="w-5 h-5" style={{ color: 'var(--muted-foreground)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -486,7 +513,10 @@ export const Sidebar: React.FC = () => {
         {!activeFlow ? (
           /* StartFlow Button */
           <button
-            onClick={() => setStartFlowOpen(true)}
+            onClick={() => {
+              setStartFlowOpen(true);
+              onClose?.();
+            }}
             className="w-full py-2.5 px-4 rounded-xl font-semibold text-[13px] text-white transition-all flex items-center justify-center gap-2"
             style={{
               background: 'linear-gradient(135deg, #7BA8CC 0%, #A5C8E1 100%)',
@@ -1085,6 +1115,7 @@ export const Sidebar: React.FC = () => {
           <Dialog.Content
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl shadow-2xl z-50 p-6"
             style={{ background: 'var(--card)' }}
+            aria-describedby={undefined}
           >
             <Dialog.Title
               className="text-lg font-semibold mb-4"
@@ -1216,6 +1247,7 @@ export const Sidebar: React.FC = () => {
           <Dialog.Content
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-xl shadow-2xl z-50 p-6"
             style={{ background: 'var(--card)' }}
+            aria-describedby={undefined}
           >
             <Dialog.Title
               className="text-lg font-semibold mb-4"

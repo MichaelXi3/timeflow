@@ -28,6 +28,10 @@ interface AppState {
   isRightSidebarCollapsed: boolean;
   setRightSidebarCollapsed: (collapsed: boolean) => void;
 
+  // Mobile left sidebar state
+  isLeftSidebarOpen: boolean;
+  setLeftSidebarOpen: (open: boolean) => void;
+
   // Flow tracking state
   activeFlow: FlowSession | null;
   setActiveFlow: (flow: FlowSession | null) => void;
@@ -61,6 +65,9 @@ export const useAppStore = create<AppState>()(
 
       isRightSidebarCollapsed: false,
       setRightSidebarCollapsed: (collapsed) => set({ isRightSidebarCollapsed: collapsed }),
+
+      isLeftSidebarOpen: false,
+      setLeftSidebarOpen: (open) => set({ isLeftSidebarOpen: open }),
 
       activeFlow: null,
       setActiveFlow: (flow) => set({ activeFlow: flow }),

@@ -171,6 +171,7 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
         />
         <Dialog.Content
           className="fixed right-0 top-0 bottom-0 w-96 z-50 p-6 overflow-y-auto transition-all duration-300 ease-out"
+          aria-describedby={undefined}
           style={{
             backgroundColor: 'var(--card)',
             borderLeft: '1px solid var(--border)',

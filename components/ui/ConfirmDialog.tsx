@@ -58,7 +58,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             transition={{ duration: 0.2 }}
           />
         </Dialog.Overlay>
-        <Dialog.Content asChild>
+        <Dialog.Content asChild aria-describedby={description ? undefined : undefined}>
           <motion.div
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl shadow-2xl z-50 p-6"
             style={{ background: 'var(--card)' }}
