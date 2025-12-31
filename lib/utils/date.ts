@@ -1,5 +1,5 @@
 /**
- * Date utilities for TimeFlow
+ * Date utilities for DomainFlow
  * All TimeSlots store UTC timestamps; these helpers handle local display
  */
 

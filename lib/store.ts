@@ -80,7 +80,7 @@ export const useAppStore = create<AppState>()(
         set({ userId });
         // Store userId globally for db.ts to access
         if (typeof window !== 'undefined') {
-          (window as any).__timeflow_user_id = userId;
+          (window as any).__domainflow_user_id = userId;
         }
       },
 
@@ -104,7 +104,7 @@ export const useAppStore = create<AppState>()(
         }),
     }),
     {
-      name: 'timeflow-storage',
+      name: 'domainflow-storage',
       storage: createJSONStorage(() => localStorage),
       // Only persist specific fields to avoid issues with non-serializable data like Date
       partialize: (state) => ({

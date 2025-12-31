@@ -51,19 +51,19 @@ export default function ExportPage() {
 
     const filteredSlots = allSlots.filter((s) => s.start >= startTime && s.start < endTime);
     const csv = exportTimeSlotsToCSV(filteredSlots, allTags);
-    downloadFile(csv, `timeflow-slots-${dateRange.start}-to-${dateRange.end}.csv`, 'text/csv');
+    downloadFile(csv, `domainflow-slots-${dateRange.start}-to-${dateRange.end}.csv`, 'text/csv');
   };
 
   const handleExportTags = () => {
     if (!allTags || !allDomains) return;
     const csv = exportTagsToCSV(allTags, allDomains);
-    downloadFile(csv, 'timeflow-tags.csv', 'text/csv');
+    downloadFile(csv, 'domainflow-tags.csv', 'text/csv');
   };
 
   const handleExportLogs = () => {
     if (!allLogs) return;
     const md = exportDailyLogsToMarkdown(allLogs);
-    downloadFile(md, 'timeflow-logs.md', 'text/markdown');
+    downloadFile(md, 'domainflow-logs.md', 'text/markdown');
   };
 
   const handleExportICS = () => {
@@ -76,7 +76,7 @@ export default function ExportPage() {
     const ics = exportTimeSlotsToICS(filteredSlots, allTags);
     downloadFile(
       ics,
-      `timeflow-calendar-${dateRange.start}-to-${dateRange.end}.ics`,
+      `domainflow-calendar-${dateRange.start}-to-${dateRange.end}.ics`,
       'text/calendar'
     );
   };

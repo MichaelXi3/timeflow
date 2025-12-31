@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'TimeFlow — Calm Time Journaling',
+  title: 'DomainFlow — Calm Time Journaling',
   description: 'Reduce productivity anxiety and enter flow by tracking time, not tasks.',
   manifest: '/manifest.json',
   icons: {

@@ -485,7 +485,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             <div className="relative w-12 h-12 flex-shrink-0">
               <Image
                 src="/logo.png"
-                alt="TimeFlow Logo"
+                alt="DomainFlow Logo"
                 fill
                 sizes="48px"
                 className="object-contain"
@@ -494,7 +494,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             </div>
             <div>
               <h1 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-                TimeFlow
+                DomainFlow
               </h1>
               <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                 Track domains, not tasks

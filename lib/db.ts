@@ -9,7 +9,7 @@ import {
   ConflictRecord,
 } from './types';
 
-export class TimeFlowDB extends Dexie {
+export class DomainFlowDB extends Dexie {
   timeslots!: Table<TimeSlot, string>;
   tags!: Table<Tag, string>;
   dailyLogs!: Table<DailyLog, string>;
@@ -19,7 +19,7 @@ export class TimeFlowDB extends Dexie {
   conflicts!: Table<ConflictRecord, string>;
 
   constructor() {
-    super('TimeFlowDB');
+    super('DomainFlowDB');
 
     // Version 1: Initial schema
     this.version(1).stores({
@@ -160,10 +160,10 @@ export class TimeFlowDB extends Dexie {
   }
 }
 
-export const db = new TimeFlowDB();
+export const db = new DomainFlowDB();
 
 // ClientId management (persistent device identifier)
-const CLIENT_ID_KEY = 'timeflow_client_id';
+const CLIENT_ID_KEY = 'domainflow_client_id';
 
 export function getOrCreateClientId(): string {
   if (typeof window === 'undefined') return 'server';
@@ -180,7 +180,7 @@ export function getOrCreateClientId(): string {
 function getCurrentUserId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   // Will be populated by auth state
-  return (window as any).__timeflow_user_id || undefined;
+  return (window as any).__domainflow_user_id || undefined;
 }
 
 // Outbox helper

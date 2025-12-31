@@ -1,9 +1,9 @@
-# TimeFlow — Calm Time Journaling
+# DomainFlow — Calm Time Journaling
 
-TimeFlow is a personal productivity app that helps you understand where your time goes without the stress of to-do lists and overdue tasks. Instead of planning what you'll do, you record what you *actually* do—in time blocks—and reflect on patterns.
+DomainFlow is a personal productivity app that helps you understand where your time goes without the stress of to-do lists and overdue tasks. Instead of planning what you'll do, you record what you *actually* do—in time blocks—and reflect on patterns.
 
 <p align="center">
-  <img src="public/logo_bar.png" alt="TimeFlow" width="280" />
+  <img src="public/logo_bar.png" alt="DomainFlow" width="280" />
 </p>
 
 <p align="center">
@@ -110,7 +110,7 @@ pnpm start
 ## Project Structure
 
 ```
-TimeFlow/
+DomainFlow/
 ├── app/                     # Next.js App Router pages
 │   ├── page.tsx             # Week view (default, Apple Calendar style)
 │   ├── day/page.tsx         # Single day view

@@ -1,6 +1,6 @@
 {
-  "name": "TimeFlow - Calm Time Journaling",
-  "short_name": "TimeFlow",
+  "name": "DomainFlow - Calm Time Journaling",
+  "short_name": "DomainFlow",
   "description": "Reduce productivity anxiety and enter flow by tracking time, not tasks",
   "start_url": "/",
   "display": "standalone",

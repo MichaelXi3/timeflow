@@ -55,7 +55,7 @@ export function exportTagsToCSV(tags: Tag[], domains: DomainEntity[]): string {
  * Export daily logs to Markdown format
  */
 export function exportDailyLogsToMarkdown(logs: DailyLog[]): string {
-  let content = '# TimeFlow Daily Logs\n\n';
+  let content = '# DomainFlow Daily Logs\n\n';
 
   for (const log of logs) {
     content += `---\n\n`;
@@ -74,7 +74,7 @@ export function exportTimeSlotsToICS(slots: TimeSlot[], tags: Tag[]): string {
 
   let ics = 'BEGIN:VCALENDAR\n';
   ics += 'VERSION:2.0\n';
-  ics += 'PRODID:-//TimeFlow//Time Slot Journal//EN\n';
+  ics += 'PRODID:-//DomainFlow//Time Slot Journal//EN\n';
   ics += 'CALSCALE:GREGORIAN\n';
   ics += 'METHOD:PUBLISH\n';
 
@@ -84,7 +84,7 @@ export function exportTimeSlotsToICS(slots: TimeSlot[], tags: Tag[]): string {
     const description = slot.note || '';
 
     ics += 'BEGIN:VEVENT\n';
-    ics += `UID:${slot.id}@timeflow\n`;
+    ics += `UID:${slot.id}@domainflow\n`;
     ics += `DTSTAMP:${formatICSDate(new Date())}\n`;
     ics += `DTSTART:${formatICSDate(new Date(slot.start))}\n`;
     ics += `DTEND:${formatICSDate(new Date(slot.end))}\n`;

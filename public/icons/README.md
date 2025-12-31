@@ -14,5 +14,5 @@ Place the generated icons in this directory with the following sizes:
 - icon-384x384.png
 - icon-512x512.png
 
-For now, you can use a placeholder by creating a simple colored square with the TimeFlow logo or initials.
+For now, you can use a placeholder by creating a simple colored square with the DomainFlow logo or initials.
 
