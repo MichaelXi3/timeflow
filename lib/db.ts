@@ -560,44 +560,11 @@ export const dbHelpers = {
   },
 };
 
-// Global initialization lock to prevent race conditions
-let initializationPromise: Promise<void> | null = null;
-
 // Initialize database on first run
+// Note: No longer creates default domains - users start with a blank slate
 export async function initializeDatabase() {
-  // If a promise already exists, return it to wait for it or reuse its result
-  if (initializationPromise) {
-    return initializationPromise;
-  }
-
-  // Assign the promise immediately (synchronously) to prevent other calls from starting
-  initializationPromise = (async () => {
-    // Check if user is logged in
-    const userId = getCurrentUserId();
-    
-    // If user is logged in, skip initialization
-    // The sync process will pull their data from the cloud
-    if (userId) {
-      console.log('[initializeDatabase] User logged in, skipping local initialization (will sync from cloud)');
-      return;
-    }
-
-    // Check if already initialized inside the async flow
-    const count = await db.domains.count();
-    if (count > 0) return;
-
-    // Create a single placeholder domain for anonymous users
-    console.log('[initializeDatabase] Creating placeholder domain for anonymous user');
-    await dbHelpers.createDomain({
-      name: 'Create your Domain',
-      color: '#A5C8E1',
-      colorEnd: '#B8D4E8',
-      order: 1,
-    });
-  })();
-
-  return initializationPromise;
+  // Just ensure the database is ready
+  // No default data creation - users will create their own domains
+  console.log('[initializeDatabase] Database ready (no default domains)');
+  return Promise.resolve();
 }
-
-// Legacy export for backward compatibility (will be removed in cleanup)
-export const seedDefaultTags = initializeDatabase;

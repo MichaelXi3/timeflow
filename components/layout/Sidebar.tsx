@@ -151,20 +151,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     if (!isSupabaseConfigured()) return;
 
     // Check current user on mount
-    getCurrentUser().then(async (user) => {
+    getCurrentUser().then((user) => {
       if (user) {
         setUserId(user.id);
         setUserEmail(user.email || null);
-
-        // Clean up placeholder domain if user is logged in
-        // This handles the case where initializeDatabase() ran before auth was restored
-        const placeholderDomain = await db.domains
-          .filter((d) => d.name === 'Create your Domain' && !d.userId)
-          .first();
-        if (placeholderDomain) {
-          await db.domains.delete(placeholderDomain.id);
-          console.log('[Auth] Cleaned up placeholder domain on mount');
-        }
       }
     });
 
@@ -180,28 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         await db.syncState.delete('sync_cursor');
         console.log('[Auth] Cleared sync cursor for fresh user login');
 
-        // 🔑 CRITICAL: Delete placeholder domain BEFORE migration
-        // Otherwise it will be pushed to cloud and pollute user's data
-        const placeholderDomains = await db.domains
-          .filter((d) => d.name === 'Create your Domain')
-          .toArray();
-        
-        for (const placeholder of placeholderDomains) {
-          await db.domains.delete(placeholder.id);
-          console.log('[Auth] Deleted placeholder domain before migration:', placeholder.id);
-        }
-
-        // Also delete any tags associated with placeholder domains
-        const placeholderTags = await db.tags
-          .filter((t) => t.name === 'Create your Domain' || !t.domainId)
-          .toArray();
-        
-        for (const tag of placeholderTags) {
-          await db.tags.delete(tag.id);
-          console.log('[Auth] Deleted orphaned tag:', tag.id);
-        }
-
-        // Migrate local data to cloud (now without placeholder data)
+        // Migrate local data to cloud
         setIsSyncing(true);
         try {
           const result = await migrateLocalToCloud(newUserId);
@@ -672,6 +641,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </button>
         </div>
         <div className="space-y-1">
+          {allDomains && allDomains.length === 0 && (
+            <div className="px-3 py-8 text-center">
+              <p className="text-sm text-gray-400 mb-2">No domains yet</p>
+              <p className="text-xs text-gray-500">
+                Click "+ Domain" above to create your first domain
+              </p>
+            </div>
+          )}
           {allDomains?.map((domainEntity) => {
             const tags = tagsByDomainId[domainEntity.id] || [];
             const isExpanded = selectedDomain === domainEntity.id;
