@@ -13,16 +13,10 @@ const PULL_DAYS_RANGE = 90; // Pull last 90 days of data
 export async function syncPush(): Promise<{ success: number; failed: number }> {
   // Use SSR browser client which has auth session from cookies
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) {
-    console.log('Supabase not configured, skipping push');
-    return { success: 0, failed: 0 };
-  }
+  if (!supabase) return { success: 0, failed: 0 };
 
   const user = await getCurrentUser();
-  if (!user) {
-    console.log('User not authenticated, skipping push');
-    return { success: 0, failed: 0 };
-  }
+  if (!user) return { success: 0, failed: 0 };
 
   // Get pending events
   const pendingEvents = await db.outbox
@@ -57,7 +51,7 @@ export async function syncPush(): Promise<{ success: number; failed: number }> {
 
       successCount++;
     } catch (error) {
-      console.error(`Failed to sync event ${event.id}:`, error);
+      console.error(`[Sync] Push failed for ${event.id}:`, error);
 
       // Update retry count and status
       await db.outbox.update(event.id, {
@@ -193,16 +187,10 @@ function mapLocalToServer(entity: string, local: any): any {
 export async function syncPull(): Promise<{ pulled: number; conflicts: number }> {
   // Use SSR browser client which has auth session from cookies
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) {
-    console.log('Supabase not configured, skipping pull');
-    return { pulled: 0, conflicts: 0 };
-  }
+  if (!supabase) return { pulled: 0, conflicts: 0 };
 
   const user = await getCurrentUser();
-  if (!user) {
-    console.log('User not authenticated, skipping pull');
-    return { pulled: 0, conflicts: 0 };
-  }
+  if (!user) return { pulled: 0, conflicts: 0 };
 
   // Get last pull cursor
   const syncState = await db.syncState.get('sync_cursor');
@@ -213,10 +201,8 @@ export async function syncPull(): Promise<{ pulled: number; conflicts: number }>
   
   // If first sync, ignore any existing cursor (it might be from a different user or corrupted)
   if (isFirstSync) {
-    console.log(`[syncPull] First sync for user ${user.id}, ignoring cursor`);
+    console.log(`[Sync] First-time pull for user ${user.id.slice(0, 8)}...`);
     lastPullCursor = undefined;
-  } else {
-    console.log(`[syncPull] Starting pull for user ${user.id}, lastCursor: ${lastPullCursor || 'none'}`);
   }
 
   let pulledCount = 0;
@@ -233,11 +219,10 @@ export async function syncPull(): Promise<{ pulled: number; conflicts: number }>
   for (const { table, entity } of entities) {
     try {
       const result = await pullEntityFromSupabase(supabase, table, entity, user.id, lastPullCursor);
-      console.log(`[syncPull] ${table}: pulled ${result.pulled}, conflicts ${result.conflicts}`);
       pulledCount += result.pulled;
       conflictCount += result.conflicts;
     } catch (error) {
-      console.error(`Failed to pull ${table}:`, error);
+      console.error(`[Sync] Failed to pull ${table}:`, error);
     }
   }
 
@@ -251,8 +236,6 @@ export async function syncPull(): Promise<{ pulled: number; conflicts: number }>
     lastPullAt: Date.now(),
     userId: user.id,
   });
-
-  console.log(`[syncPull] Complete: pulled ${pulledCount}, conflicts ${conflictCount}, new cursor: ${newCursor || 'none'}`);
 
   return { pulled: pulledCount, conflicts: conflictCount };
 }
@@ -289,11 +272,9 @@ async function pullEntityFromSupabase(
   const { data, error } = await query;
 
   if (error) {
-    console.error(`[pullEntity] Query error for ${tableName}:`, error);
+    console.error(`[Sync] Query error for ${tableName}:`, error);
     throw error;
   }
-  
-  console.log(`[pullEntity] ${tableName}: fetched ${data?.length || 0} rows from server`);
   
   if (!data || data.length === 0) {
     return { pulled: 0, conflicts: 0 };
@@ -316,7 +297,6 @@ async function pullEntityFromSupabase(
         .first();
 
       if (pendingOutboxEvent) {
-        console.log(`Skipping pull for ${entity} ${localEntity.id} - has pending outbox event`);
         continue; // Skip this entity, local pending change takes precedence
       }
 
@@ -325,7 +305,6 @@ async function pullEntityFromSupabase(
         if (existing) {
           // Delete from local DB (physical delete, not soft delete)
           await deleteLocalEntityPhysically(entity, localEntity.id);
-          console.log(`Physically deleted ${entity} ${localEntity.id} from local DB`);
         }
         pulledCount++;
         continue; // Skip to next entity
@@ -358,7 +337,7 @@ async function pullEntityFromSupabase(
 
       pulledCount++;
     } catch (error) {
-      console.error(`Failed to process server row for ${entity}:`, error);
+      console.error(`[Sync] Row processing failed for ${entity}:`, error);
     }
   }
 
@@ -595,13 +574,14 @@ export function startSyncLoop(intervalMs: number = 30000) {
       const user = await getCurrentUser();
       if (!user || !navigator.onLine) return;
 
-      console.log('Running background sync...');
       const pushResult = await syncPush();
       const pullResult = await syncPull();
 
-      console.log('Sync complete:', { push: pushResult, pull: pullResult });
+      if (pushResult.success > 0 || pushResult.failed > 0 || pullResult.pulled > 0) {
+        console.log(`[Sync] Pushed ${pushResult.success} (failed ${pushResult.failed}), Pulled ${pullResult.pulled}`);
+      }
     } catch (error) {
-      console.error('Background sync error:', error);
+      console.error('[Sync] Background error:', error);
     }
   };
 

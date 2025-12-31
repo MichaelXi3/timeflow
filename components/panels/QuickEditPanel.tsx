@@ -96,7 +96,7 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
       // Add to recent
       selectedTagIds.forEach((id) => addRecentTag(id));
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      console.error('[DB] Auto-save failed:', error);
     }
   };
 

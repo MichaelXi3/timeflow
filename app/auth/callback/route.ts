@@ -10,14 +10,14 @@ export async function GET(request: Request) {
 
   // Handle OAuth errors from provider
   if (error) {
-    console.error('OAuth error:', error, errorDescription);
+    console.error('[Auth] OAuth error:', error, errorDescription);
     return NextResponse.redirect(
       `${origin}?auth_error=${encodeURIComponent(errorDescription || error)}`
     );
   }
 
   if (!code) {
-    console.error('No authorization code found in callback');
+    console.error('[Auth] No authorization code found in callback');
     return NextResponse.redirect(`${origin}?auth_error=No+authorization+code`);
   }
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Supabase environment variables not configured');
+    console.error('[Auth] Supabase environment variables not configured');
     return NextResponse.redirect(`${origin}?auth_error=Server+configuration+error`);
   }
 
@@ -42,14 +42,14 @@ export async function GET(request: Request) {
           cookieStore.set({ name, value, ...options });
         } catch (error) {
           // This can happen if headers have already been sent
-          console.error('Error setting cookie:', name, error);
+          console.error('[Auth] Error setting cookie:', name, error);
         }
       },
       remove(name: string, options: CookieOptions) {
         try {
           cookieStore.delete({ name, ...options });
         } catch (error) {
-          console.error('Error removing cookie:', name, error);
+          console.error('[Auth] Error removing cookie:', name, error);
         }
       },
     },
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
-      console.error('PKCE exchange error:', exchangeError);
+      console.error('[Auth] PKCE exchange error:', exchangeError);
       return NextResponse.redirect(
         `${origin}?auth_error=${encodeURIComponent(exchangeError.message)}`
       );
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     // Success! Redirect to home page
     return NextResponse.redirect(origin);
   } catch (error) {
-    console.error('Unexpected error during auth callback:', error);
+    console.error('[Auth] Unexpected error during auth callback:', error);
     return NextResponse.redirect(`${origin}?auth_error=Unexpected+error`);
   }
 }

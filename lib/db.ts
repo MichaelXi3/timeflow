@@ -342,10 +342,12 @@ export const dbHelpers = {
       .filter((event) => event.status === 'synced' && event.createdAt < thirtyDaysAgo)
       .delete();
 
-    console.log(
-      `[Cleanup] Removed ${oldDeletedSlots.length} slots, ${oldDeletedTags.length} tags, ` +
-      `${oldDeletedDomains.length} domains, ${oldDeletedLogs.length} logs`
-    );
+    if (oldDeletedSlots.length > 0 || oldDeletedTags.length > 0 || oldDeletedDomains.length > 0 || oldDeletedLogs.length > 0) {
+      console.log(
+        `[DB] Cleanup: ${oldDeletedSlots.length} slots, ${oldDeletedTags.length} tags, ` +
+        `${oldDeletedDomains.length} domains, ${oldDeletedLogs.length} logs removed`
+      );
+    }
   },
 
   // Tags
@@ -565,6 +567,5 @@ export const dbHelpers = {
 export async function initializeDatabase() {
   // Just ensure the database is ready
   // No default data creation - users will create their own domains
-  console.log('[initializeDatabase] Database ready (no default domains)');
   return Promise.resolve();
 }

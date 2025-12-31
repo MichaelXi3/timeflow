@@ -455,7 +455,7 @@ export const WeekGrid: React.FC<WeekGridProps> = ({
         {/* Time labels */}
         <div
           ref={timeLabelsRef}
-          className="flex-shrink-0 w-16 overflow-y-auto scrollbar-hide bg-gray-50 relative z-10"
+          className="flex-shrink-0 w-16 overflow-hidden bg-gray-50 relative z-10 pointer-events-none"
           style={{
             boxShadow:
               '2px 0 10px -2px rgba(74, 140, 199, 0.08), 1px 0 3px rgba(74, 140, 199, 0.04)',

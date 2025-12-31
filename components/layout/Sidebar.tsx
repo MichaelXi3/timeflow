@@ -168,15 +168,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
         // Clear any existing sync cursor to force a full pull
         await db.syncState.delete('sync_cursor');
-        console.log('[Auth] Cleared sync cursor for fresh user login');
 
         // Migrate local data to cloud
         setIsSyncing(true);
         try {
           const result = await migrateLocalToCloud(newUserId);
-          console.log(`Migrated ${result.migrated} items to cloud`);
+          if (result.migrated > 0) {
+            console.log(`[Auth] Migrated ${result.migrated} local items to cloud`);
+          }
         } catch (error) {
-          console.error('Migration error:', error);
+          console.error('[Auth] Migration error:', error);
         } finally {
           setIsSyncing(false);
         }
@@ -1012,7 +1013,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       setUserId(null);
                       setUserEmail(null);
                     } catch (error) {
-                      console.error('Sign out error:', error);
+                      console.error('[Auth] Sign out error:', error);
                     }
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm"
@@ -1043,7 +1044,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                   try {
                     await signInWithGoogle();
                   } catch (error) {
-                    console.error('Sign in error:', error);
+                    console.error('[Auth] Sign in error:', error);
                     setErrorTitle('Sign In Failed');
                     setErrorMessage(
                       error instanceof Error ? error.message : 'Unknown error occurred'
