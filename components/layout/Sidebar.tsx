@@ -180,16 +180,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         await db.syncState.delete('sync_cursor');
         console.log('[Auth] Cleared sync cursor for fresh user login');
 
-        // Delete placeholder domain if it exists (user will get their real data from cloud)
-        const placeholderDomain = await db.domains
-          .filter((d) => d.name === 'Create your Domain' && !d.userId)
-          .first();
-        if (placeholderDomain) {
-          await db.domains.delete(placeholderDomain.id);
-          console.log('[Auth] Deleted placeholder domain');
+        // 🔑 CRITICAL: Delete placeholder domain BEFORE migration
+        // Otherwise it will be pushed to cloud and pollute user's data
+        const placeholderDomains = await db.domains
+          .filter((d) => d.name === 'Create your Domain')
+          .toArray();
+        
+        for (const placeholder of placeholderDomains) {
+          await db.domains.delete(placeholder.id);
+          console.log('[Auth] Deleted placeholder domain before migration:', placeholder.id);
         }
 
-        // Migrate local data to cloud
+        // Also delete any tags associated with placeholder domains
+        const placeholderTags = await db.tags
+          .filter((t) => t.name === 'Create your Domain' || !t.domainId)
+          .toArray();
+        
+        for (const tag of placeholderTags) {
+          await db.tags.delete(tag.id);
+          console.log('[Auth] Deleted orphaned tag:', tag.id);
+        }
+
+        // Migrate local data to cloud (now without placeholder data)
         setIsSyncing(true);
         try {
           const result = await migrateLocalToCloud(newUserId);
