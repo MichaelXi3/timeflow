@@ -497,7 +497,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 TimeFlow
               </h1>
               <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                Track time, not tasks
+                Track domains, not tasks
               </p>
             </div>
           </div>

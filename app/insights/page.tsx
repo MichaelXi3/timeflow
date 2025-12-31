@@ -314,7 +314,7 @@ export default function InsightsPage() {
                 Insights
               </h1>
               <p className="text-sm mt-1 hidden lg:block" style={{ color: 'var(--muted-foreground)' }}>
-                Visualize your time patterns
+                See where your time flows — by domains
               </p>
             </div>
           </div>

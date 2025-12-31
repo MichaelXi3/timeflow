@@ -7,7 +7,7 @@ TimeFlow is a personal productivity app that helps you understand where your tim
 </p>
 
 <p align="center">
-  <i>"Track time, not tasks. Reduce anxiety, enter flow."</i>
+  <i>"Track domains, not tasks."</i>
 </p>
 
 ---
