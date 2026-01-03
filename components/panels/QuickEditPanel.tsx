@@ -41,20 +41,22 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
 
   const allDomains = useLiveQuery(() => dbHelpers.getAllDomains(), []);
 
-  // Group tags by domain ID
-  const tagsByDomainId = allTags.reduce(
-    (acc, tag) => {
-      if (!acc[tag.domainId]) acc[tag.domainId] = [];
-      acc[tag.domainId].push(tag);
-      return acc;
-    },
-    {} as Record<string, Tag[]>
-  );
+  // Group tags by domain ID (exclude archived tags)
+  const tagsByDomainId = allTags
+    .filter((tag) => !tag.archivedAt) // Filter out archived tags
+    .reduce(
+      (acc, tag) => {
+        if (!acc[tag.domainId]) acc[tag.domainId] = [];
+        acc[tag.domainId].push(tag);
+        return acc;
+      },
+      {} as Record<string, Tag[]>
+    );
 
-  // Recent tags
+  // Recent tags (exclude archived tags)
   const recentTags = recentTagIds
     .map((id) => allTags.find((t) => t.id === id))
-    .filter((t): t is Tag => t !== undefined)
+    .filter((t): t is Tag => t !== undefined && !t.archivedAt) // Filter out archived tags
     .slice(0, 5);
 
   // Filtered tags for selected domain
@@ -218,10 +220,10 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
             />
           </div>
 
-          {/* Recent tags */}
+          {/* Recent sub-domains */}
           {recentTags.length > 0 && (
             <div className="mb-5">
-              <label className="block text-xs font-medium text-gray-700 mb-2">Recent Tags</label>
+              <label className="block text-xs font-medium text-gray-700 mb-2">Recent Sub-domains</label>
               <div className="flex flex-wrap gap-1.5">
                 {recentTags.map((tag) => (
                   <button
@@ -266,16 +268,16 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
             </div>
           </div>
 
-          {/* Tag filter and selection */}
+          {/* Sub-domain filter and selection */}
           {selectedDomain && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
-                {allDomains?.find((d) => d.id === selectedDomain)?.name} Tags
+                {allDomains?.find((d) => d.id === selectedDomain)?.name} Sub-domains
               </label>
               <input
                 type="text"
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-2"
-                placeholder="Filter tags..."
+                placeholder="Filter sub-domains..."
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
               />
@@ -395,8 +397,8 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
       <ConfirmDialog
         open={isTagWarningOpen}
         onOpenChange={setIsTagWarningOpen}
-        title="Tag Required"
-        description="Please select at least one tag. If you want to cancel, please delete the time slot."
+        title="Sub-domain Required"
+        description="Please select at least one sub-domain. If you want to cancel, please delete the time slot."
         confirmText="OK"
         showCancel={false}
         onConfirm={() => setIsTagWarningOpen(false)}

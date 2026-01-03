@@ -13,6 +13,7 @@ export interface DomainEntity {
   userId?: string; // null for anonymous, set after login
   clientId?: string; // device/browser identifier
   deletedAt?: number; // soft delete timestamp (null = not deleted)
+  archivedAt?: number; // archive timestamp (null = not archived)
 }
 
 export interface Tag {
@@ -26,6 +27,7 @@ export interface Tag {
   userId?: string;
   clientId?: string;
   deletedAt?: number;
+  archivedAt?: number; // archive timestamp (null = not archived)
 }
 
 export interface TimeSlot {

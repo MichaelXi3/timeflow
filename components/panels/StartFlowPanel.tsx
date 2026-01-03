@@ -53,7 +53,7 @@ export const StartFlowPanel: React.FC<StartFlowPanelProps> = ({ onClose }) => {
 
   const allTags = useLiveQuery(async () => {
     const tags = await db.tags.toArray();
-    return tags.filter((tag) => !tag.deletedAt);
+    return tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
   }, []);
   const allDomains = useLiveQuery(() => dbHelpers.getAllDomains(), []);
 
@@ -307,14 +307,14 @@ export const StartFlowPanel: React.FC<StartFlowPanelProps> = ({ onClose }) => {
               />
             </div>
 
-            {/* Recent Tags */}
+            {/* Recent Sub-domains */}
             {recentTags.length > 0 && (
               <div>
                 <label
                   className="block text-sm font-medium mb-2"
                   style={{ color: 'var(--foreground)' }}
                 >
-                  Recent Tags
+                  Recent Sub-domains
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {recentTags.map((tag) => (
@@ -525,12 +525,12 @@ export const StartFlowPanel: React.FC<StartFlowPanelProps> = ({ onClose }) => {
         </motion.div>
       </div>
 
-      {/* Tag Required Warning Dialog */}
+      {/* Sub-domain Required Warning Dialog */}
       <ConfirmDialog
         open={isTagWarningOpen}
         onOpenChange={setIsTagWarningOpen}
-        title="Tag Required"
-        description="Please select at least one tag before starting your flow."
+        title="Sub-domain Required"
+        description="Please select at least one sub-domain before starting your flow."
         confirmText="OK"
         showCancel={false}
         onConfirm={() => setIsTagWarningOpen(false)}

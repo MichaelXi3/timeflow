@@ -157,6 +157,34 @@ export class DomainFlowDB extends Dexie {
           });
         }
       });
+
+    // Version 5: Add archivedAt field support
+    this.version(5)
+      .stores({
+        timeslots: 'id, start, end, updatedAt, userId, clientId, deletedAt, *tagIds',
+        tags: 'id, domainId, name, updatedAt, userId, clientId, deletedAt, archivedAt',
+        dailyLogs: 'id, date, updatedAt, userId, clientId, deletedAt',
+        domains: 'id, name, order, updatedAt, userId, clientId, deletedAt, archivedAt',
+        outbox: 'id, status, createdAt, userId, clientId, entity, entityId',
+        syncState: 'id, userId',
+        conflicts: 'id, entity, entityId, conflictedAt',
+      })
+      .upgrade(async (trans) => {
+        // Initialize archivedAt to null for existing records
+        const domains = await trans.table('domains').toArray();
+        for (const domain of domains) {
+          if (domain.archivedAt === undefined) {
+            await trans.table('domains').update(domain.id, { archivedAt: null });
+          }
+        }
+
+        const tags = await trans.table('tags').toArray();
+        for (const tag of tags) {
+          if (tag.archivedAt === undefined) {
+            await trans.table('tags').update(tag.id, { archivedAt: null });
+          }
+        }
+      });
   }
 }
 
@@ -435,12 +463,49 @@ export const dbHelpers = {
 
   async getAllTags(): Promise<Tag[]> {
     const tags = await db.tags.toArray();
-    return tags.filter((tag) => !tag.deletedAt);
+    return tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
   },
 
   async getTagsByDomain(domainId: string): Promise<Tag[]> {
     const tags = await db.tags.where('domainId').equals(domainId).toArray();
-    return tags.filter((tag) => !tag.deletedAt);
+    return tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
+  },
+
+  async archiveTag(id: string) {
+    const existing = await db.tags.get(id);
+    if (!existing) return;
+
+    const now = Date.now();
+
+    const archived = {
+      ...existing,
+      archivedAt: now,
+      updatedAt: now,
+    };
+
+    await db.tags.put(archived);
+    await addToOutbox('tags', 'update', id, archived);
+  },
+
+  async unarchiveTag(id: string) {
+    const existing = await db.tags.get(id);
+    if (!existing) return;
+
+    const now = Date.now();
+
+    const unarchived = {
+      ...existing,
+      archivedAt: undefined,
+      updatedAt: now,
+    };
+
+    await db.tags.put(unarchived);
+    await addToOutbox('tags', 'update', id, unarchived);
+  },
+
+  async getArchivedTags(): Promise<Tag[]> {
+    const tags = await db.tags.toArray();
+    return tags.filter((tag) => !tag.deletedAt && tag.archivedAt);
   },
 
   // Domains
@@ -519,7 +584,61 @@ export const dbHelpers = {
 
   async getAllDomains(): Promise<DomainEntity[]> {
     const domains = await db.domains.orderBy('order').toArray();
-    return domains.filter((domain) => !domain.deletedAt);
+    return domains.filter((domain) => !domain.deletedAt && !domain.archivedAt);
+  },
+
+  async archiveDomain(id: string) {
+    const existing = await db.domains.get(id);
+    if (!existing) return;
+
+    const now = Date.now();
+
+    // Archive domain and all its tags
+    const archived = {
+      ...existing,
+      archivedAt: now,
+      updatedAt: now,
+    };
+
+    await db.domains.put(archived);
+    await addToOutbox('domains', 'update', id, archived);
+
+    // Archive all tags under this domain
+    const tags = await db.tags.where('domainId').equals(id).toArray();
+    for (const tag of tags) {
+      if (!tag.deletedAt && !tag.archivedAt) {
+        await this.archiveTag(tag.id);
+      }
+    }
+  },
+
+  async unarchiveDomain(id: string) {
+    const existing = await db.domains.get(id);
+    if (!existing) return;
+
+    const now = Date.now();
+
+    const unarchived = {
+      ...existing,
+      archivedAt: undefined,
+      updatedAt: now,
+    };
+
+    await db.domains.put(unarchived);
+    await addToOutbox('domains', 'update', id, unarchived);
+
+    // Automatically unarchive all tags under this domain
+    const tags = await db.tags.where('domainId').equals(id).toArray();
+    for (const tag of tags) {
+      if (!tag.deletedAt && tag.archivedAt) {
+        await this.unarchiveTag(tag.id);
+      }
+    }
+  },
+
+  async getArchivedDomains(): Promise<DomainEntity[]> {
+    const domains = await db.domains.orderBy('order').toArray();
+    return domains.filter((domain) => !domain.deletedAt && domain.archivedAt);
   },
 
   // Daily Logs

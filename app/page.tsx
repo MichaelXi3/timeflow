@@ -35,6 +35,7 @@ export default function HomePage() {
     setRightSidebarCollapsed,
     isLeftSidebarOpen,
     setLeftSidebarOpen,
+    sidebarWidth,
   } = useAppStore();
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -65,13 +66,13 @@ export default function HomePage() {
 
   const allTags = useLiveQuery(async () => {
     const tags = await db.tags.toArray();
-    // Filter out soft-deleted tags
+    // Filter out soft-deleted tags only (keep archived tags for timeslot display)
     return tags.filter((tag) => !tag.deletedAt);
   }, []);
 
   const allDomains = useLiveQuery(async () => {
     const domains = await db.domains.toArray();
-    // Filter out soft-deleted domains
+    // Filter out soft-deleted domains only (keep archived domains for reference)
     return domains.filter((domain) => !domain.deletedAt);
   }, []);
 
@@ -98,7 +99,7 @@ export default function HomePage() {
   return (
     <div className="h-screen flex" style={{ background: 'var(--background)' }}>
       {/* Left Sidebar - hidden on small screens, visible on lg+ */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block" style={{ flexShrink: 0 }}>
         <Sidebar />
       </div>
 

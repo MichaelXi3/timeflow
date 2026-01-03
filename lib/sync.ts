@@ -158,6 +158,7 @@ function mapLocalToServer(entity: string, local: any): any {
         domain_id: local.domainId,
         name: local.name,
         color: local.color || null,
+        archived_at: local.archivedAt ? new Date(local.archivedAt).toISOString() : null,
       };
 
     case 'domains':
@@ -167,6 +168,7 @@ function mapLocalToServer(entity: string, local: any): any {
         color: local.color,
         color_end: local.colorEnd || null,
         order: local.order,
+        archived_at: local.archivedAt ? new Date(local.archivedAt).toISOString() : null,
       };
 
     case 'dailyLogs':
@@ -376,6 +378,7 @@ function mapServerToLocal(entity: string, server: any): any {
         domainId: server.domain_id,
         name: server.name,
         color: server.color || undefined,
+        archivedAt: server.archived_at ? new Date(server.archived_at).getTime() : undefined,
       } as Tag;
 
     case 'domains':
@@ -385,6 +388,7 @@ function mapServerToLocal(entity: string, server: any): any {
         color: server.color,
         colorEnd: server.color_end || undefined,
         order: server.order,
+        archivedAt: server.archived_at ? new Date(server.archived_at).getTime() : undefined,
       } as DomainEntity;
 
     case 'dailyLogs':

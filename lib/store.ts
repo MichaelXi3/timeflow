@@ -49,6 +49,10 @@ interface AppState {
   // Recently used tags (for quick access)
   recentTagIds: string[];
   addRecentTag: (tagId: string) => void;
+
+  // Sidebar width (resizable)
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -102,6 +106,9 @@ export const useAppStore = create<AppState>()(
             recentTagIds: [tagId, ...filtered].slice(0, 5), // Keep only 5 most recent
           };
         }),
+
+      sidebarWidth: 256, // Default width (16rem = 256px)
+      setSidebarWidth: (width) => set({ sidebarWidth: width }),
     }),
     {
       name: 'domainflow-storage',
@@ -113,6 +120,7 @@ export const useAppStore = create<AppState>()(
         isRightSidebarCollapsed: state.isRightSidebarCollapsed,
         recentTagIds: state.recentTagIds,
         userId: state.userId,
+        sidebarWidth: state.sidebarWidth,
       }),
     }
   )

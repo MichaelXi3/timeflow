@@ -71,6 +71,17 @@ const TrashIcon = ({ className, style }: { className?: string; style?: React.CSS
   </svg>
 );
 
+const ArchiveBoxIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+  <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+    />
+  </svg>
+);
+
 const PlayIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
     <path d="M8 5v14l11-7z" />
@@ -89,7 +100,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const router = useRouter();
-  const { activeFlow, setActiveFlow, setStartFlowOpen, userId, setUserId } = useAppStore();
+  const { activeFlow, setActiveFlow, setStartFlowOpen, userId, setUserId, sidebarWidth, setSidebarWidth } = useAppStore();
 
   // Safe navigation that checks for unsaved changes
   const safeNavigate = (path: string) => {
@@ -131,10 +142,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   const allTags = useLiveQuery(async () => {
     const tags = await db.tags.toArray();
-    return tags.filter((tag) => !tag.deletedAt);
+    return tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
   }, []);
   const allDomains = useLiveQuery(() => dbHelpers.getAllDomains(), []);
 
@@ -196,6 +208,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     const stopSync = startSyncLoop(30000); // Sync every 30 seconds
     return stopSync;
   }, [userId]);
+
+  // Handle sidebar resize
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const minWidth = 200; // Minimum width in pixels
+      const maxWidth = 480; // Maximum width in pixels
+      const newWidth = Math.max(minWidth, Math.min(maxWidth, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, setSidebarWidth]);
 
   // Group tags by domain ID
   const tagsByDomainId = React.useMemo(() => {
@@ -318,6 +354,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       } catch (error) {
         setIsConfirmOpen(false);
         setErrorTitle('Failed to delete domain');
+        setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
+        setIsErrorOpen(true);
+      }
+    });
+    setIsConfirmOpen(true);
+  };
+
+  const handleArchiveDomain = async (domainId: string) => {
+    const domain = allDomains?.find((d) => d.id === domainId);
+    if (!domain) return;
+
+    setConfirmTitle('Archive Domain');
+    setConfirmMessage(
+      `Archive "${domain.name}"? All sub-domains (tags) will also be archived. Time slots will be preserved.`
+    );
+    setConfirmAction(() => async () => {
+      try {
+        await dbHelpers.archiveDomain(domainId);
+        setIsConfirmOpen(false);
+      } catch (error) {
+        setIsConfirmOpen(false);
+        setErrorTitle('Failed to archive domain');
+        setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
+        setIsErrorOpen(true);
+      }
+    });
+    setIsConfirmOpen(true);
+  };
+
+  const handleArchiveTag = async (tagId: string) => {
+    const tag = allTags?.find((t) => t.id === tagId);
+    if (!tag) return;
+
+    setConfirmTitle('Archive Sub-domain');
+    setConfirmMessage(
+      `Archive "${tag.name}"? Time slots will be preserved and you can unarchive it later.`
+    );
+    setConfirmAction(() => async () => {
+      try {
+        await dbHelpers.archiveTag(tagId);
+        setIsConfirmOpen(false);
+      } catch (error) {
+        setIsConfirmOpen(false);
+        setErrorTitle('Failed to archive sub-domain');
         setErrorMessage(error instanceof Error ? error.message : 'Unknown error occurred');
         setIsErrorOpen(true);
       }
@@ -469,8 +549,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
   return (
     <div
-      className="w-64 flex flex-col h-full relative z-20"
+      className="flex flex-col h-full relative z-20"
       style={{
+        width: onClose ? '16rem' : `${sidebarWidth}px`, // Fixed width for mobile, dynamic for desktop
         background: 'var(--card)',
         boxShadow: '4px 0 15px -5px rgba(74, 140, 199, 0.1), 1px 0 4px rgba(74, 140, 199, 0.05)',
       }}
@@ -742,21 +823,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       }
                     }}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div
-                        className="w-3 h-3 rounded-sm shadow-sm"
+                        className="w-3 h-3 rounded-sm shadow-sm flex-shrink-0"
                         style={{
                           background: `linear-gradient(135deg, ${domainEntity.color} 0%, ${domainEntity.colorEnd || domainEntity.color} 100%)`,
                         }}
                       />
-                      <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                      <span className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
                         {domainEntity.name}
                       </span>
-                      <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                      <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted-foreground)' }}>
                         ({tags.length})
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -768,6 +849,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         title="Rename domain"
                       >
                         <PencilIcon
+                          className="w-3 h-3"
+                          style={{ color: 'var(--muted-foreground)' }}
+                        />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchiveDomain(domainEntity.id);
+                        }}
+                        className="p-1 rounded transition-colors"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#fef9e7';
+                          e.currentTarget.querySelector('svg')!.setAttribute('style', 'color: #f59e0b');
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget
+                            .querySelector('svg')!
+                            .setAttribute('style', 'color: var(--muted-foreground)');
+                        }}
+                        title="Archive domain"
+                      >
+                        <ArchiveBoxIcon
                           className="w-3 h-3"
                           style={{ color: 'var(--muted-foreground)' }}
                         />
@@ -890,16 +994,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                             (e.currentTarget.style.backgroundColor = 'transparent')
                           }
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <div
-                              className="w-2 h-2 rounded-sm"
+                              className="w-2 h-2 rounded-sm flex-shrink-0"
                               style={{ backgroundColor: tag.color }}
                             />
-                            <span className="text-xs" style={{ color: 'var(--foreground)' }}>
+                            <span className="text-xs truncate" style={{ color: 'var(--foreground)' }}>
                               {tag.name}
                             </span>
                           </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <button
                               onClick={() => handleStartEditTag(tag)}
                               className="p-1 rounded transition-colors"
@@ -911,6 +1015,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                               }
                             >
                               <PencilIcon
+                                className="w-3 h-3"
+                                style={{ color: 'var(--muted-foreground)' }}
+                              />
+                            </button>
+                            <button
+                              onClick={() => handleArchiveTag(tag.id)}
+                              className="p-1 rounded transition-colors"
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#fef9e7';
+                                e.currentTarget
+                                  .querySelector('svg')!
+                                  .setAttribute('style', 'color: #f59e0b');
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget
+                                  .querySelector('svg')!
+                                  .setAttribute('style', 'color: var(--muted-foreground)');
+                              }}
+                              title="Archive sub-domain"
+                            >
+                              <ArchiveBoxIcon
                                 className="w-3 h-3"
                                 style={{ color: 'var(--muted-foreground)' }}
                               />
@@ -957,7 +1083,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       </div>
                       <input
                         type="text"
-                        placeholder="New tag..."
+                        placeholder="Sub-domain..."
                         value={newTagName}
                         onChange={(e) => setNewTagName(e.target.value)}
                         onKeyDown={(e) => {
@@ -1080,6 +1206,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         )}
 
         <div className="p-4">
+          <button
+            onClick={() => safeNavigate('/archive')}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-2"
+            style={{ color: 'var(--muted-foreground)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--hover)';
+              e.currentTarget.style.color = 'var(--foreground)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--muted-foreground)';
+            }}
+          >
+            <ArchiveBoxIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">Archive</span>
+          </button>
+
           <button
             onClick={() => safeNavigate('/export')}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-2"
@@ -1389,6 +1532,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         showCancel={false}
         onConfirm={handleConfirmStop}
       />
+
+      {/* Resize Handle - only show on desktop */}
+      {!onClose && (
+        <div
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize group hover:bg-blue-400 transition-colors z-30"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsResizing(true);
+          }}
+          style={{
+            backgroundColor: isResizing ? '#60a5fa' : 'transparent',
+          }}
+        >
+          {/* Wider hover area for better UX */}
+          <div className="absolute top-0 right-0 w-2 h-full -translate-x-1/2" />
+        </div>
+      )}
     </div>
   );
 };

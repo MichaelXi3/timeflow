@@ -28,7 +28,7 @@ import {
 
 export default function InsightsPage() {
   const router = useRouter();
-  const { settings, isLeftSidebarOpen, setLeftSidebarOpen } = useAppStore();
+  const { settings, isLeftSidebarOpen, setLeftSidebarOpen, sidebarWidth } = useAppStore();
   const [isInitialized, setIsInitialized] = useState(false);
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'custom'>('week');
   const [customStartDate, setCustomStartDate] = useState(() => {
@@ -95,7 +95,7 @@ export default function InsightsPage() {
 
   const allTags = useLiveQuery(async () => {
     const tags = await db.tags.toArray();
-    // Filter out soft-deleted tags
+    // Filter out soft-deleted tags only (keep archived tags for statistics)
     return tags.filter((tag) => !tag.deletedAt);
   }, []);
   const allDomains = useLiveQuery(() => dbHelpers.getAllDomains(), []);
@@ -260,7 +260,7 @@ export default function InsightsPage() {
   return (
     <div className="h-screen flex" style={{ background: 'var(--background)' }}>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block" style={{ flexShrink: 0 }}>
         <Sidebar />
       </div>
 

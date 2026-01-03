@@ -177,7 +177,7 @@ export default function DayPage() {
   return (
     <div className="h-screen flex bg-gray-50">
       {/* Left Sidebar - hidden on small screens, visible on lg+ */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block" style={{ flexShrink: 0 }}>
         <Sidebar />
       </div>
 
