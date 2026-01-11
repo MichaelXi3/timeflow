@@ -81,9 +81,16 @@ export const QuickEditPanel: React.FC<QuickEditPanelProps> = ({ slot, allTags, o
       const newEnd = new Date(slotDate);
       newEnd.setHours(endHour, endMin, 0, 0);
 
-      // Validate
+      // Handle midnight crossing: if end time is before start time, it means the slot crosses midnight
+      // In this case, add a day to the end time
       if (newEnd <= newStart) {
-        return; // Silently skip invalid times
+        // Check if this is a midnight crossing scenario (end hour is smaller than start hour)
+        if (endHour < startHour || (endHour === startHour && endMin < startMin)) {
+          newEnd.setDate(newEnd.getDate() + 1);
+        } else {
+          // Invalid time range (same day but end <= start)
+          return;
+        }
       }
 
       await dbHelpers.updateTimeSlot(slot.id, {

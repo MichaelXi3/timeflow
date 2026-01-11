@@ -41,6 +41,8 @@ export default function InsightsPage() {
   });
   const [tempStartDate, setTempStartDate] = useState(customStartDate);
   const [tempEndDate, setTempEndDate] = useState(customEndDate);
+  const [domainChartType, setDomainChartType] = useState<'pie' | 'bar'>('pie');
+  const [topSubDomainsCount, setTopSubDomainsCount] = useState<5 | 10 | 15>(10);
 
   const applyCustomRange = () => {
     setCustomStartDate(tempStartDate);
@@ -117,6 +119,39 @@ export default function InsightsPage() {
     if (!slots || !allTags || !allDomains) return [];
     return calculateDomainStats(slots, allTags, allDomains, settings.attributionMode);
   }, [slots, allTags, allDomains, settings.attributionMode]);
+
+  // Calculate sub-domain (tag) stats
+  const subDomainStats = React.useMemo(() => {
+    if (!slots || !allTags || !allDomains) return [];
+
+    const tagMinutes: Record<string, { name: string; minutes: number; domainName: string; color?: string }> = {};
+
+    slots.forEach((slot) => {
+      const duration = (slot.end - slot.start) / (60 * 1000);
+      const minutesPerTag = duration / (slot.tagIds.length || 1);
+
+      slot.tagIds.forEach((tagId) => {
+        const tag = allTags.find((t) => t.id === tagId);
+        if (tag) {
+          const domain = allDomains.find((d) => d.id === tag.domainId);
+          if (!tagMinutes[tagId]) {
+            tagMinutes[tagId] = {
+              name: tag.name,
+              minutes: 0,
+              domainName: domain?.name || 'Unknown',
+              color: tag.color,
+            };
+          }
+          tagMinutes[tagId].minutes += minutesPerTag;
+        }
+      });
+    });
+
+    // Convert to array and sort by minutes (descending)
+    return Object.values(tagMinutes)
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, topSubDomainsCount);
+  }, [slots, allTags, allDomains, topSubDomainsCount]);
 
   // Prepare pie chart data
   const pieData = domainStats.map((stat) => ({
@@ -473,65 +508,141 @@ export default function InsightsPage() {
 
             {/* Charts Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Pie Chart */}
+              {/* Domain Distribution - Pie/Bar Toggle */}
               <div
                 className="p-6 rounded-xl"
                 style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
               >
-                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--foreground)' }}>
-                  Time Distribution
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
+                    Domain Distribution
+                  </h3>
+                  <button
+                    onClick={() => setDomainChartType(domainChartType === 'pie' ? 'bar' : 'pie')}
+                    className="p-2 rounded-lg transition-colors hover:bg-opacity-80"
+                    style={{ backgroundColor: 'var(--hover)' }}
+                    title={`Switch to ${domainChartType === 'pie' ? 'bar' : 'pie'} chart`}
+                  >
+                    {domainChartType === 'pie' ? (
+                      <svg className="w-5 h-5" style={{ color: 'var(--foreground)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" style={{ color: 'var(--foreground)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {pieData.length > 0 ? (
                   <div>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={false}
-                          outerRadius={90}
-                          innerRadius={40}
-                          fill="#8884d8"
-                          dataKey="value"
-                          paddingAngle={2}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={domainColorMap[entry.name] || '#4A8CC7'}
+                    {domainChartType === 'pie' ? (
+                      <>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={false}
+                              outerRadius={90}
+                              innerRadius={40}
+                              fill="#8884d8"
+                              dataKey="value"
+                              paddingAngle={2}
+                            >
+                              {pieData.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={domainColorMap[entry.name] || '#4A8CC7'}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(value: number) => `${Math.round(value)}m`}
+                              contentStyle={{
+                                background: 'var(--card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                              }}
                             />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        {/* Custom legend */}
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                          {pieData.map((entry, index) => (
+                            <div key={entry.name} className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-sm"
+                                style={{ backgroundColor: domainColorMap[entry.name] || '#4A8CC7' }}
+                              />
+                              <span className="text-xs" style={{ color: 'var(--foreground)' }}>
+                                {entry.name}
+                              </span>
+                              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                                {entry.percentage.toFixed(0)}%
+                              </span>
+                            </div>
                           ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => `${Math.round(value)}m`}
-                          contentStyle={{
-                            background: 'var(--card)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    {/* Custom legend */}
-                    <div className="grid grid-cols-2 gap-2 mt-4">
-                      {pieData.map((entry, index) => (
-                        <div key={entry.name} className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-sm"
-                            style={{ backgroundColor: domainColorMap[entry.name] || '#4A8CC7' }}
-                          />
-                          <span className="text-xs" style={{ color: 'var(--foreground)' }}>
-                            {entry.name}
-                          </span>
-                          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            {entry.percentage.toFixed(0)}%
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-end mb-2">
+                          <span
+                            className="text-xs px-2 py-1 rounded"
+                            style={{ backgroundColor: 'var(--hover)', color: 'var(--muted-foreground)' }}
+                          >
+                            Unit: Hours
                           </span>
                         </div>
-                      ))}
-                    </div>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={domainStats}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                            <XAxis
+                              dataKey="domain"
+                              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                              stroke="var(--border)"
+                            />
+                            <YAxis
+                              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                              stroke="var(--border)"
+                              label={{
+                                value: 'Hours',
+                                angle: -90,
+                                position: 'insideLeft',
+                                style: { fill: 'var(--muted-foreground)', fontSize: 12 },
+                              }}
+                              tickFormatter={(value) => `${(value / 60).toFixed(0)}`}
+                            />
+                            <Tooltip
+                              formatter={(value: number) => {
+                                const hours = Math.floor(value / 60);
+                                const minutes = Math.round(value % 60);
+                                return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                              }}
+                              contentStyle={{
+                                background: 'var(--card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                              }}
+                            />
+                            <Bar dataKey="minutes" radius={[8, 8, 0, 0]}>
+                              {domainStats.map((stat, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={domainColorMap[stat.domain] || '#4A8CC7'}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <p className="text-center py-20" style={{ color: 'var(--muted-foreground)' }}>
@@ -540,65 +651,89 @@ export default function InsightsPage() {
                 )}
               </div>
 
-              {/* Bar Chart - Domain Breakdown */}
+              {/* Top Sub-domains (Projects) */}
               <div
                 className="p-6 rounded-xl"
                 style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>
-                    Domain Breakdown
+                    Top Sub-domains
                   </h3>
-                  <span
-                    className="text-xs px-2 py-1 rounded"
-                    style={{ backgroundColor: 'var(--hover)', color: 'var(--muted-foreground)' }}
-                  >
-                    Unit: Hours
-                  </span>
+                  <div className="flex gap-1">
+                    {([5, 10, 15] as const).map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => setTopSubDomainsCount(count)}
+                        className="px-2 py-1 text-xs font-medium rounded transition-colors"
+                        style={{
+                          backgroundColor: topSubDomainsCount === count ? 'var(--primary)' : 'var(--hover)',
+                          color: topSubDomainsCount === count ? 'white' : 'var(--muted-foreground)',
+                        }}
+                      >
+                        Top {count}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {domainStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={domainStats}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                      <XAxis
-                        dataKey="domain"
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                        stroke="var(--border)"
-                      />
-                      <YAxis
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
-                        stroke="var(--border)"
-                        label={{
-                          value: 'Hours',
-                          angle: -90,
-                          position: 'insideLeft',
-                          style: { fill: 'var(--muted-foreground)', fontSize: 12 },
-                        }}
-                        tickFormatter={(value) => `${(value / 60).toFixed(0)}`}
-                      />
-                      <Tooltip
-                        formatter={(value: number) => {
-                          const hours = Math.floor(value / 60);
-                          const minutes = Math.round(value % 60);
-                          return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                        }}
-                        contentStyle={{
-                          background: 'var(--card)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Bar dataKey="minutes" radius={[8, 8, 0, 0]}>
-                        {domainStats.map((stat, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={domainColorMap[stat.domain] || '#4A8CC7'}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                {subDomainStats.length > 0 ? (
+                  <div className="space-y-3">
+                    {subDomainStats.map((stat, index) => {
+                      const hours = Math.floor(stat.minutes / 60);
+                      const minutes = Math.round(stat.minutes % 60);
+                      const maxMinutes = subDomainStats[0].minutes;
+                      const widthPercent = (stat.minutes / maxMinutes) * 100;
+
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span
+                                className="font-medium text-sm"
+                                style={{ color: 'var(--muted-foreground)' }}
+                              >
+                                #{index + 1}
+                              </span>
+                              <div
+                                className="w-2 h-2 rounded-sm flex-shrink-0"
+                                style={{ backgroundColor: stat.color || '#4A8CC7' }}
+                              />
+                              <span
+                                className="font-medium truncate"
+                                style={{ color: 'var(--foreground)' }}
+                              >
+                                {stat.name}
+                              </span>
+                              <span
+                                className="text-xs truncate"
+                                style={{ color: 'var(--muted-foreground)' }}
+                              >
+                                ({stat.domainName})
+                              </span>
+                            </div>
+                            <span
+                              className="font-semibold ml-2 flex-shrink-0"
+                              style={{ color: 'var(--foreground)' }}
+                            >
+                              {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}
+                            </span>
+                          </div>
+                          <div
+                            className="h-2 rounded-full overflow-hidden"
+                            style={{ backgroundColor: 'var(--hover)' }}
+                          >
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${widthPercent}%`,
+                                backgroundColor: stat.color || '#4A8CC7',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <p className="text-center py-20" style={{ color: 'var(--muted-foreground)' }}>
                     No data available
