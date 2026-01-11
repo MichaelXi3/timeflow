@@ -1224,30 +1224,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </button>
 
           <button
-            onClick={() => safeNavigate('/export')}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-2"
-            style={{ color: 'var(--muted-foreground)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--hover)';
-              e.currentTarget.style.color = 'var(--foreground)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--muted-foreground)';
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            <span className="text-sm font-medium">Export</span>
-          </button>
-
-          <button
             onClick={() => setIsSettingsOpen(true)}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
             style={{ color: 'var(--muted-foreground)' }}
@@ -1459,7 +1435,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end">
+            {/* Export Data Section */}
+            <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+              <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
+                Data Management
+              </h3>
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  safeNavigate('/export');
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'var(--card)',
+                  color: 'var(--foreground)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--card)';
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                Export Data
+              </button>
+            </div>
+
+            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setIsSettingsOpen(false)}
                 className="px-6 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
