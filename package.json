@@ -22,6 +22,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@vercel/analytics": "^1.6.1",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
     "framer-motion": "^10.16.16",
