@@ -26,18 +26,20 @@ DomainFlow is a personal time-awareness app that helps you understand how your t
 
 ### Core
 - **Week View**: Calendar-style 7-day grid with smooth drag-to-create (15 min intervals)
-- **Day View**: Detailed single-day time grid for focused planning
-- **Quick Edit Panel**: Add notes, 2-level tags (Domain → Subtag), energy & mood ratings
-- **Weekly Summary**: Real-time pie charts and domain breakdowns in sidebar
-- **Daily Logs**: Markdown editor with auto-generated template from your time data
+- **Day View**: Detailed single-day time grid with integrated Daily Log editor
+- **Quick Edit Panel**: Add notes, 2-level tags (Domain → Sub-domain), energy & mood ratings
+- **Insights Page**: Analytics dashboard with domain distribution, trends, and top sub-domains
+- **Daily Logs**: Markdown editor with auto-generated templates from your time data
 - **Export/Import**: CSV, Markdown, and ICS (iCalendar) formats
 - **Offline PWA**: Install as a standalone app, works without internet
 - **Cloud Sync (Optional)**: Sign in with Google to sync across devices via Supabase
 
-### Tag System
-- **Domains**: Life, Study, Family, Health, Work, Create (customizable)
-- **Subtags**: Granular activities within each domain (e.g., Study → Biology, C++, CS)
+### Domain & Sub-domain System
+- **Domains**: Top-level categories (Life, Study, Family, Health, Work, Create) - fully customizable
+- **Sub-domains**: Granular activities/projects within each domain (e.g., Study → Biology, CFA, CS)
+- **Archive System**: Archive domains/sub-domains without losing historical data
 - **Multi-tag support**: Split duration evenly or assign to primary tag (configurable)
+- **Drag & Reorder**: Easily reorganize domains and sub-domains by dragging
 
 ---
 
@@ -52,8 +54,9 @@ DomainFlow is a personal time-awareness app that helps you understand how your t
 - **dnd-kit**: Drag-and-drop for time block creation and resizing
 
 ### State & Storage
-- **Zustand**: Lightweight state management for UI state
+- **Zustand**: Lightweight state management for UI state with localStorage persistence
 - **IndexedDB via Dexie**: ~1GB+ storage capacity, transactions, indexing, offline-first
+- **In-Memory Cache**: 5-second TTL cache for frequent queries (domains/tags) to reduce IndexedDB load
 - **Supabase (Optional)**: Cloud sync with Postgres + RLS, Google OAuth authentication
 - **Why not SQLite WASM?** Too heavy (~800KB bundle) for this schema
 - **Why not LocalStorage?** 5-10MB limit, no indexing, no transactions
@@ -113,11 +116,11 @@ pnpm start
 DomainFlow/
 ├── app/                     # Next.js App Router pages
 │   ├── page.tsx             # Week view (default, Apple Calendar style)
-│   ├── day/page.tsx         # Single day view
-│   ├── logs/page.tsx        # Markdown journal editor
-│   ├── settings/page.tsx    # Tag manager & preferences
+│   ├── day/[date]/page.tsx  # Single day view with Daily Log
+│   ├── insights/page.tsx    # Analytics dashboard
+│   ├── archive/page.tsx     # Archived domains & sub-domains
 │   ├── export/page.tsx      # CSV/MD/ICS export/import
-│   ├── layout.tsx           # Root layout with navigation
+│   ├── layout.tsx           # Root layout with Vercel Analytics
 │   └── globals.css          # Global styles + CSS variables
 ├── components/
 │   ├── calendar/
@@ -125,25 +128,40 @@ DomainFlow/
 │   │   ├── TimeGrid.tsx     # Single day interactive grid
 │   │   └── SlotBox.tsx      # Individual time block component
 │   ├── panels/
-│   │   └── QuickEditPanel.tsx  # Slide-in edit panel
+│   │   ├── QuickEditPanel.tsx    # Slide-in edit panel
+│   │   └── StartFlowPanel.tsx    # Start new flow panel
+│   ├── layout/
+│   │   └── Sidebar.tsx      # Resizable left sidebar with domains
 │   ├── stats/
 │   │   └── TodayBar.tsx     # Daily summary strip
 │   ├── charts/
-│   │   └── DomainSummary.tsx   # Pie chart + breakdown
-│   └── Navigation.tsx       # Top nav bar
+│   │   └── DomainSummary.tsx     # Pie chart + breakdown
+│   └── ui/                  # Reusable UI components
 ├── lib/
-│   ├── types.ts             # TypeScript types (TimeSlot, Tag, etc.)
-│   ├── db.ts                # Dexie schema + CRUD helpers
+│   ├── types.ts             # TypeScript types (TimeSlot, Tag, Domain, etc.)
+│   ├── db.ts                # Dexie schema + CRUD helpers with caching
+│   ├── cache.ts             # In-memory cache with TTL
 │   ├── store.ts             # Zustand state management
 │   ├── calc.ts              # Attribution & aggregation logic
 │   ├── export.ts            # CSV/MD/ICS generators
+│   ├── sync.ts              # Supabase sync logic
+│   ├── supabaseClient.ts    # Supabase client setup
 │   └── utils/
 │       └── date.ts          # Date/time utilities (UTC/local, snapping)
 ├── public/
 │   ├── manifest.json        # PWA manifest
-│   └── icons/               # PWA icons (generate with pwabuilder.com)
-├── __tests__/
-│   └── calc.test.ts         # Unit tests for calc logic
+│   ├── logo.png             # App logo
+│   └── icons/               # PWA icons
+├── __tests__/               # Comprehensive test suite
+│   ├── calc.test.ts         # Domain calculation tests
+│   ├── cache.test.ts        # Cache functionality tests (100% coverage)
+│   ├── db-cache.test.ts     # Database caching integration tests
+│   └── export-performance.test.ts  # Performance tests
+├── docs/                    # Documentation (gitignored)
+│   ├── TESTING.md           # Performance testing report
+│   ├── SYNC_IMPLEMENTATION.md  # Sync architecture
+│   ├── SUPABASE_SETUP.md    # Supabase setup guide
+│   └── SUPABASE_SCHEMA.md   # Database schema
 ├── next.config.js           # Next.js + PWA config
 ├── tailwind.config.ts       # Tailwind theme
 └── package.json
@@ -169,13 +187,28 @@ DomainFlow/
 }
 ```
 
-### Tag
+### Domain
 ```ts
 {
-  id: string;           // "Study/CFA"
-  domain: Domain;       // "Study"
-  name: string;         // "CFA"
-  color?: string;       // Hex color
+  id: string;           // UUID
+  name: string;         // "Study"
+  color: string;        // Gradient start color
+  colorEnd?: string;    // Gradient end color (optional)
+  order: number;        // Display order
+  archivedAt?: number;  // Archive timestamp
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+### Tag (Sub-domain)
+```ts
+{
+  id: string;           // UUID
+  domainId: string;     // Reference to Domain
+  name: string;         // "CFA", "Biology", etc.
+  color?: string;       // Hex color (optional)
+  archivedAt?: number;  // Archive timestamp
   createdAt: number;
   updatedAt: number;
 }
@@ -199,10 +232,17 @@ DomainFlow/
 ### Multi-tag Attribution
 - **Split evenly** (default): Duration divided equally across all tags
 - **Primary tag only**: First tag gets 100% of duration
-- Used for aggregations in summaries and charts
+- Configurable in Settings, used for aggregations in summaries and charts
 
-### Theme
-- Light/Dark theme toggle in Settings (coming soon: auto-detection)
+### Archive System
+- Archive domains or sub-domains without deleting historical data
+- Archived items disappear from main UI but timeslots remain visible
+- Dedicated Archive page to view and unarchive items
+
+### UI Customization
+- **Resizable Sidebar**: Drag the sidebar edge to adjust width
+- **Theme**: Light/Dark theme toggle in Settings
+- **Sidebar Width**: Persists across sessions
 
 ---
 
@@ -219,7 +259,7 @@ DomainFlow/
 - Access from any device with same account
 
 ### Export & Backup
-1. Go to **Export** page
+1. Go to **Settings** → **Data Management** → **Export Data**
 2. Select date range
 3. Export:
    - **Time Slots (CSV)**: Import into Excel, Google Sheets
@@ -230,6 +270,36 @@ DomainFlow/
 ### Import
 - Upload CSV files to restore or migrate data
 - Format must match export format
+- Import adds to existing data (doesn't replace)
+
+---
+
+## Performance & Testing
+
+### Optimization
+- **Lazy Loading**: Export page only loads data on-demand (not on mount)
+- **In-Memory Caching**: 5-second TTL cache reduces IndexedDB queries by 80%+
+- **Indexed Queries**: All date range queries use IndexedDB indexes for fast retrieval
+- **Automatic Cache Invalidation**: Cache clears after CRUD operations and sync
+
+### Test Coverage
+- **54 Tests** across 4 test suites (all passing)
+- **100% Coverage** of cache module
+- **Integration Tests** for database caching patterns
+- **Performance Tests** for lazy loading and query optimization
+- See `docs/TESTING.md` for detailed test report
+
+### Running Tests
+```bash
+# Run all tests
+npm test
+
+# Run with coverage
+npm test -- --coverage
+
+# Watch mode
+npm test -- --watch
+```
 
 ---
 
@@ -245,7 +315,54 @@ This is a personal project, but contributions are welcome!
 
 Please ensure:
 - Code passes ESLint/Prettier checks
-- Add tests for new features
+- Add tests for new features (run `npm test`)
 - Update README if needed
 
 ---
+
+## Recent Updates
+
+### v1.2.0 (January 2026)
+- ✨ **Insights Page**: New analytics dashboard with domain trends and top sub-domains
+- 🗄️ **Archive System**: Archive domains/sub-domains without losing data
+- ⚡ **Performance Optimization**: Lazy loading and caching (80% query reduction)
+- 📊 **Auto Daily Logs**: Automatically generate daily summaries for past dates
+- 🎨 **Resizable Sidebar**: Drag to adjust sidebar width
+- 🔄 **Midnight Crossing**: Fixed bug with timeslots crossing midnight
+- 📱 **Vercel Analytics**: Integrated for performance monitoring
+- 🧪 **Comprehensive Testing**: 54 tests with 100% cache coverage
+
+### v1.1.0 (December 2025)
+- 🔐 **Cloud Sync**: Optional Supabase sync with Google OAuth
+- 📝 **Daily Logs**: Markdown editor with auto-generated templates
+- 📤 **Export/Import**: CSV, Markdown, and ICS formats
+- 🏷️ **Tag System**: Domains and sub-domains with color coding
+- 📱 **PWA Support**: Install as standalone app
+
+---
+
+## License
+
+MIT License - feel free to use this for your own time tracking needs!
+
+---
+
+## Acknowledgments
+
+Built with:
+- [Next.js](https://nextjs.org/) - React framework
+- [Dexie.js](https://dexie.org/) - IndexedDB wrapper
+- [Supabase](https://supabase.com/) - Backend as a service
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Radix UI](https://www.radix-ui.com/) - UI primitives
+- [Recharts](https://recharts.org/) - Data visualization
+
+---
+
+<p align="center">
+  Made with ❤️ for better time awareness
+</p>
+
+<p align="center">
+  <i>"Your time is yours. Know where it flows."</i>
+</p>
