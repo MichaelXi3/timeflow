@@ -17,6 +17,7 @@ export default function ExportPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isImportDoneOpen, setIsImportDoneOpen] = useState(false);
   const [importCount, setImportCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -26,10 +27,7 @@ export default function ExportPage() {
     initializeDatabase().then(() => setIsInitialized(true));
   }, []);
 
-  const allSlots = useLiveQuery(async () => {
-    const slots = await db.timeslots.toArray();
-    return slots.filter((slot) => !slot.deletedAt);
-  }, []);
+  // Only load tags and domains (lightweight), NOT all timeslots
   const allTags = useLiveQuery(async () => {
     const tags = await db.tags.toArray();
     return tags.filter((tag) => !tag.deletedAt);
@@ -38,47 +36,80 @@ export default function ExportPage() {
     const domains = await db.domains.toArray();
     return domains.filter((domain) => !domain.deletedAt);
   }, []);
-  const allLogs = useLiveQuery(async () => {
-    const logs = await db.dailyLogs.toArray();
-    return logs.filter((log) => !log.deletedAt);
-  }, []);
 
-  const handleExportSlots = () => {
-    if (!allSlots || !allTags) return;
+  const handleExportSlots = async () => {
+    if (!allTags || isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      const startTime = new Date(dateRange.start).getTime();
+      const endTime = new Date(dateRange.end).getTime() + 24 * 60 * 60 * 1000;
 
-    const startTime = new Date(dateRange.start).getTime();
-    const endTime = new Date(dateRange.end).getTime() + 24 * 60 * 60 * 1000;
+      // Load only the timeslots in the selected date range
+      const slots = await db.timeslots
+        .where('start')
+        .between(startTime, endTime, true, true)
+        .toArray();
+      const filteredSlots = slots.filter((s) => !s.deletedAt);
 
-    const filteredSlots = allSlots.filter((s) => s.start >= startTime && s.start < endTime);
-    const csv = exportTimeSlotsToCSV(filteredSlots, allTags);
-    downloadFile(csv, `domainflow-slots-${dateRange.start}-to-${dateRange.end}.csv`, 'text/csv');
+      const csv = exportTimeSlotsToCSV(filteredSlots, allTags);
+      downloadFile(csv, `domainflow-slots-${dateRange.start}-to-${dateRange.end}.csv`, 'text/csv');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleExportTags = () => {
-    if (!allTags || !allDomains) return;
-    const csv = exportTagsToCSV(allTags, allDomains);
-    downloadFile(csv, 'domainflow-tags.csv', 'text/csv');
+    if (!allTags || !allDomains || isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      const csv = exportTagsToCSV(allTags, allDomains);
+      downloadFile(csv, 'domainflow-tags.csv', 'text/csv');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportLogs = () => {
-    if (!allLogs) return;
-    const md = exportDailyLogsToMarkdown(allLogs);
-    downloadFile(md, 'domainflow-logs.md', 'text/markdown');
+  const handleExportLogs = async () => {
+    if (isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      // Load logs only when exporting
+      const logs = await db.dailyLogs.toArray();
+      const filteredLogs = logs.filter((log) => !log.deletedAt);
+      const md = exportDailyLogsToMarkdown(filteredLogs);
+      downloadFile(md, 'domainflow-logs.md', 'text/markdown');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportICS = () => {
-    if (!allSlots || !allTags) return;
+  const handleExportICS = async () => {
+    if (!allTags || isExporting) return;
 
-    const startTime = new Date(dateRange.start).getTime();
-    const endTime = new Date(dateRange.end).getTime() + 24 * 60 * 60 * 1000;
+    setIsExporting(true);
+    try {
+      const startTime = new Date(dateRange.start).getTime();
+      const endTime = new Date(dateRange.end).getTime() + 24 * 60 * 60 * 1000;
 
-    const filteredSlots = allSlots.filter((s) => s.start >= startTime && s.start < endTime);
-    const ics = exportTimeSlotsToICS(filteredSlots, allTags);
-    downloadFile(
-      ics,
-      `domainflow-calendar-${dateRange.start}-to-${dateRange.end}.ics`,
-      'text/calendar'
-    );
+      // Load only the timeslots in the selected date range
+      const slots = await db.timeslots
+        .where('start')
+        .between(startTime, endTime, true, true)
+        .toArray();
+      const filteredSlots = slots.filter((s) => !s.deletedAt);
+
+      const ics = exportTimeSlotsToICS(filteredSlots, allTags);
+      downloadFile(
+        ics,
+        `domainflow-calendar-${dateRange.start}-to-${dateRange.end}.ics`,
+        'text/calendar'
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleImportSlots = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +128,7 @@ export default function ExportPage() {
     e.target.value = ''; // Reset input
   };
 
-  if (!isInitialized || !allSlots || !allTags || !allLogs) {
+  if (!isInitialized || !allTags || !allDomains) {
     return (
       <div className="h-full flex items-center justify-center">
         <p className="text-gray-500">Loading...</p>
@@ -140,34 +171,46 @@ export default function ExportPage() {
           <h2 className="text-lg font-semibold mb-4">Export Data</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
-              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left"
+              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleExportSlots}
+              disabled={isExporting}
             >
-              <div className="font-medium">Export Time Slots (CSV)</div>
-              <div className="text-sm text-gray-600">All time slots in selected range</div>
+              <div className="font-medium">
+                {isExporting ? 'Exporting...' : 'Export Time Slots (CSV)'}
+              </div>
+              <div className="text-sm text-gray-600">Time slots in selected range</div>
             </button>
 
             <button
-              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left"
+              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleExportTags}
+              disabled={isExporting}
             >
-              <div className="font-medium">Export Tags (CSV)</div>
+              <div className="font-medium">
+                {isExporting ? 'Exporting...' : 'Export Tags (CSV)'}
+              </div>
               <div className="text-sm text-gray-600">All tags with domains and colors</div>
             </button>
 
             <button
-              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left"
+              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleExportLogs}
+              disabled={isExporting}
             >
-              <div className="font-medium">Export Daily Logs (Markdown)</div>
+              <div className="font-medium">
+                {isExporting ? 'Exporting...' : 'Export Daily Logs (Markdown)'}
+              </div>
               <div className="text-sm text-gray-600">All journal entries as one file</div>
             </button>
 
             <button
-              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left"
+              className="px-4 py-3 border border-gray-300 rounded hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleExportICS}
+              disabled={isExporting}
             >
-              <div className="font-medium">Export Calendar (ICS)</div>
+              <div className="font-medium">
+                {isExporting ? 'Exporting...' : 'Export Calendar (ICS)'}
+              </div>
               <div className="text-sm text-gray-600">Import to Google/Apple Calendar</div>
             </button>
           </div>

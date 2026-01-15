@@ -1,6 +1,7 @@
 import { db, getOrCreateClientId } from './db';
 import { getSupabaseBrowserClient, getCurrentUser } from './supabaseClient';
 import { OutboxEvent, TimeSlot, Tag, DomainEntity, DailyLog } from './types';
+import { dataCache } from './cache';
 
 const SYNC_BATCH_SIZE = 50;
 const MAX_RETRY_COUNT = 5;
@@ -238,6 +239,11 @@ export async function syncPull(): Promise<{ pulled: number; conflicts: number }>
     lastPullAt: Date.now(),
     userId: user.id,
   });
+
+  // Invalidate cache after pulling data to ensure fresh data
+  if (pulledCount > 0) {
+    dataCache.invalidateAll();
+  }
 
   return { pulled: pulledCount, conflicts: conflictCount };
 }

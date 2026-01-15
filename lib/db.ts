@@ -8,6 +8,7 @@ import {
   SyncState,
   ConflictRecord,
 } from './types';
+import { dataCache } from './cache';
 
 export class DomainFlowDB extends Dexie {
   timeslots!: Table<TimeSlot, string>;
@@ -408,6 +409,9 @@ export const dbHelpers = {
     await db.tags.add(newTag);
     await addToOutbox('tags', 'create', newTag.id, newTag);
 
+    // Invalidate cache
+    dataCache.invalidatePattern('tags:');
+
     return newTag;
   },
 
@@ -423,6 +427,9 @@ export const dbHelpers = {
 
     await db.tags.put(updated);
     await addToOutbox('tags', 'update', id, updated);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('tags:');
 
     return updated;
   },
@@ -458,12 +465,21 @@ export const dbHelpers = {
 
     await db.tags.put(deleted);
     await addToOutbox('tags', 'delete', id, deleted);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('tags:');
   },
 
 
   async getAllTags(): Promise<Tag[]> {
+    const cacheKey = 'tags:all:active';
+    const cached = dataCache.get<Tag[]>(cacheKey);
+    if (cached) return cached;
+
     const tags = await db.tags.toArray();
-    return tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
+    const result = tags.filter((tag) => !tag.deletedAt && !tag.archivedAt);
+    dataCache.set(cacheKey, result);
+    return result;
   },
 
   async getTagsByDomain(domainId: string): Promise<Tag[]> {
@@ -485,6 +501,9 @@ export const dbHelpers = {
 
     await db.tags.put(archived);
     await addToOutbox('tags', 'update', id, archived);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('tags:');
   },
 
   async unarchiveTag(id: string) {
@@ -501,6 +520,9 @@ export const dbHelpers = {
 
     await db.tags.put(unarchived);
     await addToOutbox('tags', 'update', id, unarchived);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('tags:');
   },
 
   async getArchivedTags(): Promise<Tag[]> {
@@ -541,6 +563,9 @@ export const dbHelpers = {
     await db.domains.add(newDomain);
     await addToOutbox('domains', 'create', newDomain.id, newDomain);
 
+    // Invalidate cache
+    dataCache.invalidatePattern('domains:');
+
     return newDomain;
   },
 
@@ -556,6 +581,9 @@ export const dbHelpers = {
 
     await db.domains.put(updated);
     await addToOutbox('domains', 'update', id, updated);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('domains:');
 
     return updated;
   },
@@ -580,11 +608,20 @@ export const dbHelpers = {
 
     await db.domains.put(deleted);
     await addToOutbox('domains', 'delete', id, deleted);
+
+    // Invalidate cache
+    dataCache.invalidatePattern('domains:');
   },
 
   async getAllDomains(): Promise<DomainEntity[]> {
+    const cacheKey = 'domains:all:active';
+    const cached = dataCache.get<DomainEntity[]>(cacheKey);
+    if (cached) return cached;
+
     const domains = await db.domains.orderBy('order').toArray();
-    return domains.filter((domain) => !domain.deletedAt && !domain.archivedAt);
+    const result = domains.filter((domain) => !domain.deletedAt && !domain.archivedAt);
+    dataCache.set(cacheKey, result);
+    return result;
   },
 
   async archiveDomain(id: string) {
@@ -610,6 +647,9 @@ export const dbHelpers = {
         await this.archiveTag(tag.id);
       }
     }
+
+    // Invalidate cache
+    dataCache.invalidatePattern('domains:');
   },
 
   async unarchiveDomain(id: string) {
@@ -634,6 +674,9 @@ export const dbHelpers = {
         await this.unarchiveTag(tag.id);
       }
     }
+
+    // Invalidate cache
+    dataCache.invalidatePattern('domains:');
   },
 
   async getArchivedDomains(): Promise<DomainEntity[]> {
